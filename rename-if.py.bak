@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import re
+import json
+import subprocess
+from subprocess import Popen
+from subprocess import PIPE
+
+# get ifaces with "ip" command
+ip_cmd = Popen(["ip","-details", "-json", "link"], stdout=PIPE, stderr=PIPE, universal_newlines=True)
+out, err = ip_cmd.communicate()
+ifaces = json.loads(out)
+iface_addrs = []
+
+new_ifaces = {}
+
+for iface in ifaces:
+    if iface["link_type"] not in ["ether"]:
+        continue
+
+    # get name and mac address
+    addr = iface.get("permaddr") if iface.get("permaddr") is not None else iface.get("address")
+    name = iface.get("ifname")
+
+    # get iface link speed (via supported link modes)
+    p2 = Popen(["ethtool", name], stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    out2, err2 = p2.communicate()
+    slm = "Supported link modes:"
+    slm_idx = out2.find(slm) + len(slm)
+    slm_dirty = out2[slm_idx:].strip().split()
+    slm_pattern = re.compile("^([0-9].*)/(Full)?(Half)?$")
+    max_speed = 0
+    for slm in slm_dirty:
+        if slm_pattern.match(slm):
+            speed = int(re.findall(r'\d+', slm)[0])
+            max_speed = max(max_speed, speed)
+    gbps_speed = str(max_speed / 1000)
+    gbps_speed = gbps_speed[:gbps_speed.find(".")] if int(gbps_speed.split('.')[1]) == 0 else gbps_speed
+    gbps_speed = gbps_speed + "Gb"
+    print("IFACE", name, addr, gbps_speed)
+    if gbps_speed not in new_ifaces:
+        new_ifaces[gbps_speed] = []
+    new_ifaces[gbps_speed].append((addr, name))
+
+new_ifaces["2.5Gb"].append(('b4:2e:99:ab:39:a7', 'enp9s0'))
+new_ifaces["0Gb"].append(('b4:2e:99:ab:39:a2', 'enp4s0'))
+
+# generate new iface names
+for iface_speed in new_ifaces.keys():
+    new_ifaces[iface_speed].sort()
+    for i, iface in enumerate(new_ifaces[iface_speed]):
+        if iface[1].startswith("wl"):
+            new_ifname = "wlan" + str(i)
+        else:
+            new_ifname = "eth" + iface_speed + str(i)
+        # print(new_ifname)
+        print("renaming " + iface[1] + " (" + iface[0] + ") to " + new_ifname)
+
+

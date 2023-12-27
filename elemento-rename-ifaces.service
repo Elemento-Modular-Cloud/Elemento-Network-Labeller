@@ -1,0 +1,10 @@
+[Unit]
+Description=elemento-rename-ifaces
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/elemento-rename-if.py
+
+[Install]
+WantedBy=network.target
+
