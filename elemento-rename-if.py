@@ -62,8 +62,11 @@ def rename_iface(oldname, newname):
                    ["ip", "link", "set", "dev", oldname, "name", newname],
                    ["ip", "link", "set", "dev", newname, "up"]
                    ]
-    nmcli_commands = [["nmcli", "con", "modify", nm_connections[oldname], "connection.interface-name", newname],
-                      ["nmcli", "con", "up",  nm_connections[oldname]]
+    nmcli_commands = [
+                        ["nmcli", "dev", "set", nm_connections[oldname], "autoconnect", "yes"],
+                        ["nmcli", "con", "modify", nm_connections[oldname], "connection.id", newname],
+                        ["nmcli", "con", "modify", nm_connections[oldname], "connection.interface-name", newname],
+                        ["nmcli", "con", "up",  nm_connections[oldname]]
                       ]
 
     for cmd in ip_commands:
