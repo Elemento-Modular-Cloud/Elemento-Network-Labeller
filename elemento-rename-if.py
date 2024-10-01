@@ -117,6 +117,9 @@ for link_type in new_ifaces.keys():
     for i, iface in enumerate(new_ifaces[link_type]):
         new_ifname = link_type + str(i)
         print("renaming " + iface[1] + " (" + iface[0] + ") to " + new_ifname)
+        if iface[1]=="br0":
+            print("Skipping br0")
+            continue
         rename_iface(iface[1], new_ifname)
 
 
